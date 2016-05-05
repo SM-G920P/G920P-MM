@@ -4,6 +4,14 @@ SUBLEVEL = 61
 EXTRAVERSION =
 NAME = TOSSUG Baby Fish
 
+#TOOLCHAIN_DIR = $(CURDIR)/toolchain/aarch64-linux-android-4.9/bin/aarch64-linux-android-
+TOOLCHAIN_DIR = /home/buildserver/aarch64-linux-android-4.9/bin/aarch64-linux-android-
+
+ifdef CONFIG_WITH_CCACHE
+ccache := ccache
+endif
+
+
 # *DOCUMENTATION*
 # To see a list of typical targets execute "make help"
 # More info can be located in ./README
@@ -192,8 +200,14 @@ SUBARCH := $(shell uname -m | sed -e s/i.86/x86/ -e s/x86_64/x86/ \
 # "make" in the configured kernel build directory always uses that.
 # Default value for CROSS_COMPILE is not to prefix executables
 # Note: Some architectures assign CROSS_COMPILE in their arch/*/Makefile
-ARCH		?= $(SUBARCH)
-CROSS_COMPILE	?= $(CONFIG_CROSS_COMPILE:"%"=%)
+#ARCH		?= $(SUBARCH)
+#CROSS_COMPILE	?= $(CONFIG_CROSS_COMPILE:"%"=%)
+ARCH		= arm64
+ifdef CONFIG_WITH_CCACHE
+CROSS_COMPILE = $(CCACHE) $(TOOLCHAIN_DIR)
+else
+CROSS_COMPILE = $(TOOLCHAIN_DIR)
+endif
 
 # Architecture as present in compile.h
 UTS_MACHINE 	:= $(ARCH)
@@ -241,7 +255,7 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 HOSTCC       = gcc
 HOSTCXX      = g++
-HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer
+HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer -std=gnu89
 HOSTCXXFLAGS = -O2
 
 # Decide whether to build built-in, modular, or both.
@@ -379,12 +393,14 @@ LINUXINCLUDE    := \
 
 KBUILD_CPPFLAGS := -D__KERNEL__
 
-KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
+KBUILD_CFLAGS   := -w -Wstrict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
 		   -fno-delete-null-pointer-checks \
-		   -fdiagnostics-show-option -Werror
+		   -fdiagnostics-show-option -Werror \
+                   -march=armv8-a+crc \
+		   -mtune=cortex-a57.cortex-a53
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
 KBUILD_AFLAGS   := -D__ASSEMBLY__
@@ -584,7 +600,7 @@ all: vmlinux
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
 else
-KBUILD_CFLAGS	+= -O2
+KBUILD_CFLAGS	+= -O3
 endif
 
 include $(srctree)/arch/$(SRCARCH)/Makefile
